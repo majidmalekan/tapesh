@@ -34,19 +34,14 @@ class UserController extends Controller
     {
         try {
             $this->client = new Client([
+                // hard code...
                 'host' => '213.233.177.228',
                 'user' => 'Raspeina',
                 'pass' => 'tol0rF@ny',
                 'port' => 8728,
             ]);
-        } catch (ClientException $e) {
+        } catch (ClientException|QueryException|ConfigException $e) {
             return $e;
-        } catch (ConfigException $e) {
-            return $e;
-
-        } catch (QueryException $e) {
-            return $e;
-
         }
     }
 
@@ -379,9 +374,7 @@ class UserController extends Controller
                         }
                         try {
                             $response = $this->client->query($query)->read();
-                        } catch (ClientException $e) {
-                            return $e;
-                        } catch (QueryException $e) {
+                        } catch (ClientException|QueryException $e) {
                             return $e;
                         }
                     }
@@ -423,7 +416,7 @@ class UserController extends Controller
                 $up = upRelation::query()->where('user_id', $item->user_id)->where('isActive', '=', '1')->get();
                 $plan = Plan::query()->where('plan_id', $up[0]->user_id)->get();
                 $array["code"] = $plan[0]->code;
-                array_push($arrays, $array);
+                $arrays[] = $array;
             }
             return response(['data' => $arrays, 'status' => 'success']);
         }
@@ -441,30 +434,12 @@ class UserController extends Controller
         if ($validData['status'] == '1') {
             $relation = upRelation::query()->where('isActive', '=', '1')->where('user_id', $user[0]->user_id)->get();
             if (count($relation) == '1') {
-                $plans = Plan::query()->where('plan_id', $relation[0]->plan_id)->get();
-                $array["trunk"] = $plans[0]->trunk;
-                $array["speed"] = $plans[0]->speed;
-                $array["category"] = $plans[0]->category;
-                $array["price"] = $plans[0]->price;
-                $array["priceUnit"] = $plans[0]->priceUnit;
-                $array["code"] = $plans[0]->code;
-                $array["trunkUnit"] = $plans[0]->trunkUnit;
-                $array["speedUnit"] = $plans[0]->speedUnit;
-                $array["plan_id"] = $plans[0]->plan_id;
-                array_push($arrays, $array);
+                $array = $this->getArr($relation[0], $array);
+                $arrays[] = $array;
                 return response(['data' => $array, 'status' => 'success']);
             } elseif (count($relation) == '0') {
                 $relationLast = upRelation::query()->where('user_id', $user[0]->user_id)->latest();
-                $plans = Plan::query()->where('plan_id', $relationLast[0]->plan_id)->get();
-                $array["trunk"] = $plans[0]->trunk;
-                $array["speed"] = $plans[0]->speed;
-                $array["category"] = $plans[0]->category;
-                $array["price"] = $plans[0]->price;
-                $array["priceUnit"] = $plans[0]->priceUnit;
-                $array["code"] = $plans[0]->code;
-                $array["trunkUnit"] = $plans[0]->trunkUnit;
-                $array["speedUnit"] = $plans[0]->speedUnit;
-                $array["plan_id"] = $plans[0]->plan_id;
+                $array = $this->getArr($relationLast[0], $array);
                 array_push($arrays, $array);
                 return response(['data' => $array, 'status' => 'success']);
             }
@@ -480,7 +455,7 @@ class UserController extends Controller
                 $array["trunkUnit"] = $plan->trunkUnit;
                 $array["speedUnit"] = $plan->speedUnit;
                 $array["plan_id"] = $plan->plan_id;
-                array_push($arrays, $array);
+                $arrays[] = $array;
             }
             return response(['data' => $arrays, 'status' => 'success']);
 
@@ -493,7 +468,7 @@ class UserController extends Controller
                 $array["priceUnit"] = $extra->priceUnit;
                 $array["code"] = $extra->code;
                 $array["extra_id"] = $extra->extra_id;
-                array_push($arrays, $array);
+                $arrays[] = $array;
             }
             return response(['data' => $arrays, 'status' => 'success']);
         }
@@ -520,6 +495,7 @@ class UserController extends Controller
         }
         $vlan=Vlan::query()->where('user_id',$user[0]->user_id)->get();
         foreach ($vlan as $item){
+            // todo: change numbers to constant variable
             $download = number_format($item["rx-byte"] / 1073741824, 3);
             $upload = number_format($item["tx-byte"] / 1073741824, 3);
             $all = $download + $upload;
@@ -530,6 +506,7 @@ class UserController extends Controller
 
     public function planDetail(Request $request)
     {
+        // todo: logics in controller are weired but validation is awesome :)
         $validData = $this->validate($request, [
             'api_token' => 'required',
             'plan_id' => 'required'
@@ -551,6 +528,7 @@ class UserController extends Controller
             return response(['data' => $extra, 'stats' => 'success']);
         }
     }
+
     public function myServices(Request $request){
         $validData=$this->validate($request,[
             'api_token'=>'required'
@@ -566,14 +544,14 @@ class UserController extends Controller
         }elseif ($upRelation[0]->dateExpire==0){
             $array["timeLeft"]=Carbon::now()->diffInDays($upRelation[0]->Extension);
         }
-        if ($upRelation[0]->isActive==1){
-            $array["status"]="آنلاین";
-        }elseif ($upRelation[0]->isActive==2){
-            $array["status"]="آفلاین";
-
-        }elseif ($upRelation[0]->isActive==0){
-            $array["status"]="خاموش شده";
-        }
+        // todo: oh it could be even better
+        $statusOptions = [
+            1 => 'آنلاین',
+            2 => 'آفلاین',
+            0 => 'خاموش شده',
+        ];
+        $statusValue = $upRelation[0]->isActive;
+        $array['status'] = $statusOptions[$statusValue];
         return response(['data'=>$array,'stats'=>'success']);
     }
 
@@ -601,7 +579,7 @@ class UserController extends Controller
             }elseif ($plan[0]->category==3){
                 $array["category"]='سه ماهه';
             }
-            array_push($arrays,$array);
+            $arrays[] = $array;
         }
         return response(['data'=>$arrays,'stats'=>'success']);
     }
@@ -624,7 +602,7 @@ class UserController extends Controller
             $array["code"]=$extra[0]->code;
             $array["volume"]=$extra[0]->volume;
             $array["status"]="موفقیت آمیز";
-            array_push($arrays,$array);
+            $arrays[] = $array;
         }
         return response(['data'=>$arrays,'stats'=>'success']);
     }
@@ -656,6 +634,7 @@ class UserController extends Controller
                             $uploadTrunk=$uploadTrunk+$uploadDay;
                         }
                         global $daily;
+                        // todo: what a hardcode, think one day you want to change one of them ;)
                         $download= number_format($item["rx-byte"] / 1073741824, 3);
                         $upload= number_format($item["tx-byte"] / 1073741824, 3);
                         $up=upRelation::query()->where('user_id',$vlan->user_id)->where('isActive','=','1')->get();
@@ -687,9 +666,7 @@ class UserController extends Controller
                             'day_id'=>$daily
                         ]);
                     }
-                } catch (ClientException $e) {
-                    return $e;
-                } catch (QueryException $e) {
+                } catch (ClientException|QueryException $e) {
                     return $e;
                 }
             }
@@ -704,6 +681,8 @@ class UserController extends Controller
         $avg=Average::query()->where('user_id',$user[0]->user_id)->get();
         return response(['data'=>compact('daily','avg'),'stats'=>'success']);
     }
+
+    // why ???
     public function jobQueryTenMinute(){
         $vlans=Vlan::all();
         foreach ($vlans as $vlan) {
@@ -746,9 +725,7 @@ class UserController extends Controller
                                 } catch (SoapFault $ex) {
                                     return $ex->faultstring;
                                 }
-                            } catch (ClientException $e) {
-                                return $e;
-                            } catch (QueryException $e) {
+                            } catch (ClientException|QueryException $e) {
                                 return $e;
                             }
                         } elseif ($diff < 10) {
@@ -822,9 +799,7 @@ class UserController extends Controller
                         } catch (SoapFault $ex) {
                             return $ex->faultstring;
                         }
-                    } catch (ClientException $e) {
-                        return $e;
-                    } catch (QueryException $e) {
+                    } catch (ClientException|QueryException $e) {
                         return $e;
                     }
                 } elseif ($day == 1) {
@@ -868,6 +843,27 @@ class UserController extends Controller
         $user=User::query()->where('api_token',$validData['api_token'])->get();
         $suggestion=Suggestions::query()->where('user_id',$user[0]->user_id)->get();
         return response(['data'=>$suggestion,'stats'=>'ok']);
+    }
+
+    /**
+     * @param $relationLast
+     * @param array $result
+     * @return array
+     */
+    public function getArr($relationLast, array $result): array
+    {
+        $plans = Plan::query()->where('plan_id', $relationLast->plan_id)->get();
+        // todo: what about $plans[0]->toArray()?
+        $result["trunk"] = $plans[0]->trunk;
+        $result["speed"] = $plans[0]->speed;
+        $result["category"] = $plans[0]->category;
+        $result["price"] = $plans[0]->price;
+        $result["priceUnit"] = $plans[0]->priceUnit;
+        $result["code"] = $plans[0]->code;
+        $result["trunkUnit"] = $plans[0]->trunkUnit;
+        $result["speedUnit"] = $plans[0]->speedUnit;
+        $result["plan_id"] = $plans[0]->plan_id;
+        return $result;
     }
 
 }
