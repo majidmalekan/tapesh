@@ -25,6 +25,7 @@ class RouterController extends Controller
     {
         try {
             $this->client = new Client([
+                // todo: change this hard code.
                 'host' => '213.233.177.228',
                 'user' => 'Raspeina',
                 'pass' => 'tol0rF@ny',
@@ -41,6 +42,7 @@ class RouterController extends Controller
         }
     }
     public function vlans(){
+        // todo: better naming?
             $array=array();
             $arrays=array();
         try {
@@ -52,9 +54,7 @@ class RouterController extends Controller
         }
         try {
             $response = $this->client->query($query)->read();
-        } catch (ClientException $e) {
-            return $e;
-        } catch (QueryException $e) {
+        } catch (ClientException|QueryException $e) {
             return $e;
         }
         foreach ($response as $item){
@@ -81,6 +81,7 @@ class RouterController extends Controller
         return response(['data'=>$arrays,'status'=>'success']);
     }
     public function vpns(){
+        // todo: better naming one more time
         $array=array();
         $arrays=array();
         try {
@@ -90,12 +91,11 @@ class RouterController extends Controller
         }
         try {
             $response = $this->client->query($query)->read();
-        } catch (ClientException $e) {
+        } catch (ClientException|QueryException $e) {
             return $e;
 
-        } catch (QueryException $e) {
-            return $e;
         }
+        // todo: review php magic methods __get() and __set()
         foreach ($response as $item){
             $array["customer"]=$item['customer'];
             $array["id"]=$item[".id"];
@@ -105,7 +105,7 @@ class RouterController extends Controller
             if (array_key_exists('actual-profile',$item)){
                 $array["actual-profile"]=$item["actual-profile"];
             }else{
-
+                // remove it or add some logic to it
             }
             if ( array_key_exists('uptime-used',$item) && array_key_exists('download-used',$item) && array_key_exists('upload-used',$item) ){
                 $array["uptime-used"]=$item['uptime-used'];
@@ -154,15 +154,17 @@ class RouterController extends Controller
             $array["incomplete"]=$item['incomplete'];
             $array["disabled"]=$item['disabled'];
             $array["shared-users"]=$item['shared-users'];
-            array_push($arrays,$array);
+            $arrays[] = $array;
         }
         return response(['data'=>$arrays,'status'=>'success']);
 
     }
     public function showVlan(Request $request){
+        // todo: create a new request class and validate requests on that class
         $validData=$this->validate($request,[
            'api_token'=>'required'
         ]);
+        // todo: i don't think that's style
         $array=array();
         $arrays=array();
         if (User::query()->where('api_token',$validData['api_token'])->count() == 1){

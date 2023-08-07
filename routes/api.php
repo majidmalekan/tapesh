@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 */
 
 Route::prefix('v1')->namespace('api\v1')->group(function(){
+    // todo: at least group them with their controller or change big controllers to smaller and readable ones.
     Route::post('/vlans' , 'RouterController@vlans');
     Route::post('/showVlan' , 'RouterController@showVlan');
     Route::post('/showVlanOption' , 'RouterController@showVlanOption');
